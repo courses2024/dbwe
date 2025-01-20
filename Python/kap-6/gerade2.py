@@ -4,5 +4,5 @@ rest = zahl % 2
 
 if rest == 0:
     print("Die Zahl", zahl, "ist gerade")
-else:
+if rest == 1:
     print("Die Zahl", zahl, "ist ungerade")

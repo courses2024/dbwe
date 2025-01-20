@@ -8,9 +8,9 @@ student = False
 alter = int( input("Alter: "))
 
 if alter > 17 and alter < 41 :
-        antwort = input("Sind sie Student? (J/N)")
-        if antwort == 'J':
-            student = True
+    antwort = input("Sind sie Student? (J/N)")
+    if antwort == 'J':
+        student = True
 
 if alter < 6:
     faktor = 0.0

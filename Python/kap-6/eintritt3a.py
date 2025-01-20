@@ -7,10 +7,11 @@ normalpreis = 20.0
 student = False
 alter = int( input("Alter: "))
 
-if alter > 17 and alter < 41 :
-    antwort = input("Sind sie Student? (J/N)")
-    if antwort == 'J' or antwort == 'j':
-        student = True
+if alter > 17:
+    if alter < 41 :
+        antwort = input("Sind sie Student? (J/N)")
+        if antwort == 'J':
+            student = True
 
 if alter < 6:
     faktor = 0.0
