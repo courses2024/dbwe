@@ -1,4 +1,9 @@
-#!/usr/local/bin/python3
+"""
+beersong.py demonstriert die Vewendung einer while-Schleife
+In jedem Durchlauf wird eine Flasche Bier ausgetrunken, ein Text ausgegeben und 
+die Anzahl der Flaschen im Kühlschrank wird um 1 reduziert.  
+Die Text-Ausgabe erfolgt abhängig davon, ob es sich um eine oder mehrere Flaschen handelt.
+"""
 
 # Variablen deklarieren
 text1 = "Flaschen Bier"
@@ -15,8 +20,8 @@ while anzahl_flaschen > 0:
         text1 = "Flasche Bier"
     print(anzahl_flaschen, text1, text2)
     print(anzahl_flaschen, text1)
-    print("Nimm Eine raus")
-    print("Trink Sie aus")
+    print("Nimm eine raus")
+    print("Trink sie aus")
     print()
     anzahl_flaschen -= 1
 

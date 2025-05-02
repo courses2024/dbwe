@@ -1,5 +1,8 @@
-# volumen.py fragt die Form und die Abmessungen für verschiedene Blumenkübel ab
-# und berechnet daraus das Volumen in Litern
+"""
+volumen.py fragt die Form und die Abmessungen für verschiedene Blumenkübel ab
+und berechnet daraus das Volumen in Litern
+Anschließend wird die Anzahl der benötigten Säcke Blumenerde berechnet
+""" 
 pi = 3.142
 volumen = 0
 anzahl_5l = 0

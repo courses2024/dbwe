@@ -1,3 +1,6 @@
+"""
+eintritt2.py demonstriert die Verwendung von elif
+"""
 normalpreis = 20.0
 alter = int( input("Alter: "))
 

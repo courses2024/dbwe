@@ -1,5 +1,5 @@
 """
-eintritt3.py demonstriert die Verknüpfung von
+eintritt3b.py demonstriert die Verknüpfung von
 zwei Bedingungen mit and
 """
 

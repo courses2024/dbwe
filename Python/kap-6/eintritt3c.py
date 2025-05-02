@@ -1,6 +1,7 @@
 """
-eintritt3.py demonstriert die Verknüpfung von
-zwei Bedingungen mit and
+eintritt3c.py 
+demonstriert die Verknüpfung von
+zwei Bedingungen mit and und mit or
 """
 
 normalpreis = 20.0

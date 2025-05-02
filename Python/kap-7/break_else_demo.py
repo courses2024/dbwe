@@ -1,3 +1,4 @@
+# break_else_demo.py zeigt die Verwendung von else in einer Schleife
 zaehlen_bis = int(input("Zählen bis (maximal 5): "))
 zahl = 0
 limit = 5

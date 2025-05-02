@@ -1,4 +1,6 @@
-""" Für die Lohnabzüge für eine Sozialversicherung sollen die folgenden Regeln gelten:
+""" 
+beitrag.py berechnet die Berechnung der Beiträge für eine Sozialversicherung.
+Für die Lohnabzüge für eine Sozialversicherung sollen die folgenden Regeln gelten:
 Der Beitrag ist erst auf Jahreslöhne ab 20'000.- zu entrichten
 Der Beitrag wird vom Lohn nur bis zu einer Höhe von 120'000.- abgezogen.
 Lohnanteile über dieser Summe sind beitragsfrei.

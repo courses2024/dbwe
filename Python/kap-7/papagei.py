@@ -1,3 +1,5 @@
+# papagei.py - Ein Papagei, der alles nachplappert, 
+# bis der Benutzer "Ende" oder "Schluss" eingibt
 while True:
     antwort = input("Erzähl mir was :")
     if antwort == "Ende" or antwort == "Schluss":

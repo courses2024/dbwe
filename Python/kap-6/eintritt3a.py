@@ -1,6 +1,5 @@
 """
-eintritt3.py demonstriert die Verknüpfung von
-zwei Bedingungen mit and
+eintritt3a.py demonstriert verschachtelte Bedingungen
 """
 
 normalpreis = 20.0

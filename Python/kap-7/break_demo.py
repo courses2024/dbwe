@@ -1,3 +1,4 @@
+# break_demo.py demonstriert die break-Anweisung in einer Schleife
 zaehlen_bis = int(input("Zählen bis (maximal 5): "))
 zahl = 0
 limit = 5
