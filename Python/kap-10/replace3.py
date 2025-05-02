@@ -1,3 +1,8 @@
+"""
+replace3.py
+Variante zu replace2.py mit list comprehension
+Dieses Programm erzeugt eine neuen Liste und ersetzt dabei alle Vorkommen einer gesuchten Zahl .
+"""
 list1 = [5, 10, 15, 20, 25, 30, 5, 10, 15, 20, 25, 30]
 print("Liste: ", list1)
 zu_ersetzen = int(input("Geben Sie eine Zahl ein, die ersetzt werden soll: "))
