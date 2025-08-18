@@ -1,37 +1,50 @@
-from datetime import datetime
+import secrets
+from datetime import datetime, timezone, timedelta
 from hashlib import md5
 from time import time
+from typing import Optional
+import sqlalchemy as sa
+import sqlalchemy.orm as so
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 from app import app, db, login
 from flask import url_for 
-import base64
-from datetime import datetime, timedelta
-import os
 
 
-followers = db.Table(
+followers = sa.Table(
     'followers',
-    db.Column('follower_id', db.Integer, db.ForeignKey('user.id')),
-    db.Column('followed_id', db.Integer, db.ForeignKey('user.id'))
+    db.metadata,
+    sa.Column('follower_id', sa.Integer, sa.ForeignKey('user.id'),
+              primary_key=True),
+    sa.Column('followed_id', sa.Integer, sa.ForeignKey('user.id'),
+              primary_key=True)
 )
 
+
 class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), index=True, unique=True)
-    email = db.Column(db.String(120), index=True, unique=True)
-    password_hash = db.Column(db.String(128))
-    posts = db.relationship('Post', backref='author', lazy='dynamic')
-    about_me = db.Column(db.String(140))
-    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
-    followed = db.relationship(
-        'User', secondary=followers,
-        primaryjoin=(followers.c.follower_id == id),
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    username: so.Mapped[str] = so.mapped_column(sa.String(64), index=True,
+                                                unique=True)
+    email: so.Mapped[str] = so.mapped_column(sa.String(120), index=True,
+                                             unique=True)
+    password_hash: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256))
+    about_me: so.Mapped[Optional[str]] = so.mapped_column(sa.String(140))
+    last_seen: so.Mapped[Optional[datetime]] = so.mapped_column(
+        default=lambda: datetime.now(timezone.utc))
+    token: so.Mapped[Optional[str]] = so.mapped_column(
+           sa.String(32), index=True, unique=True)
+    token_expiration: so.Mapped[Optional[datetime]]
+    posts: so.WriteOnlyMapped['Post'] = so.relationship(
+        back_populates='author')
+    following: so.WriteOnlyMapped['User'] = so.relationship(
+        secondary=followers, primaryjoin=(followers.c.follower_id == id),
         secondaryjoin=(followers.c.followed_id == id),
-        backref=db.backref('followers', lazy='dynamic'), lazy='dynamic')
-    token = db.Column(db.String(32), index=True, unique=True) # Der aktuelle API-Token
-    token_expiration = db.Column(db.DateTime)                 # Das Ablaufdatum des Token
+        back_populates='followers')
+    followers: so.WriteOnlyMapped['User'] = so.relationship(
+        secondary=followers, primaryjoin=(followers.c.followed_id == id),
+        secondaryjoin=(followers.c.follower_id == id),
+        back_populates='following')
 
     def __repr__(self):
         return '<User {}>'.format(self.username)
@@ -44,27 +57,44 @@ class User(UserMixin, db.Model):
 
     def avatar(self, size):
         digest = md5(self.email.lower().encode('utf-8')).hexdigest()
-        return 'https://www.gravatar.com/avatar/{}?d=identicon&s={}'.format(
-            digest, size)
+        return f'https://www.gravatar.com/avatar/{digest}?d=identicon&s={size}'
 
     def follow(self, user):
         if not self.is_following(user):
-            self.followed.append(user)
+            self.following.add(user)
 
     def unfollow(self, user):
         if self.is_following(user):
-            self.followed.remove(user)
+            self.following.remove(user)
 
     def is_following(self, user):
-        return self.followed.filter(
-            followers.c.followed_id == user.id).count() > 0
+        query = self.following.select().where(User.id == user.id)
+        return db.session.scalar(query) is not None
 
-    def followed_posts(self):
-        followed = Post.query.join(
-            followers, (followers.c.followed_id == Post.user_id)).filter(
-                followers.c.follower_id == self.id)
-        own = Post.query.filter_by(user_id=self.id)
-        return followed.union(own).order_by(Post.timestamp.desc())
+    def followers_count(self):
+        query = sa.select(sa.func.count()).select_from(
+            self.followers.select().subquery())
+        return db.session.scalar(query)
+
+    def following_count(self):
+        query = sa.select(sa.func.count()).select_from(
+            self.following.select().subquery())
+        return db.session.scalar(query)
+
+    def following_posts(self):
+        Author = so.aliased(User)
+        Follower = so.aliased(User)
+        return (
+            sa.select(Post)
+            .join(Post.author.of_type(Author))
+            .join(Author.followers.of_type(Follower), isouter=True)
+            .where(sa.or_(
+                Follower.id == self.id,
+                Author.id == self.id,
+            ))
+            .group_by(Post)
+            .order_by(Post.timestamp.desc())
+        )
 
     def get_reset_password_token(self, expires_in=600):
         return jwt.encode(
@@ -76,23 +106,28 @@ class User(UserMixin, db.Model):
         try:
             id = jwt.decode(token, app.config['SECRET_KEY'],
                             algorithms=['HS256'])['reset_password']
-        except:
+        except Exception:
             return
-        return User.query.get(id)
+        return db.session.get(User, id)
+
+    def posts_count(self):
+        query = sa.select(sa.func.count()).select_from(
+            self.posts.select().subquery())
+        return db.session.scalar(query)
 
     def to_dict(self, include_email=False):
         data = {
             'id': self.id,
             'username': self.username,
-            'last_seen': self.last_seen.isoformat() + 'Z',
+            'last_seen': self.last_seen.replace(tzinfo=timezone.utc).isoformat(),
             'about_me': self.about_me,
-            'post_count': self.posts.count(),
-            'follower_count': self.followers.count(),
-            'followed_count': self.followed.count(),
+            'post_count': self.posts_count(),
+            'follower_count': self.followers_count(),
+            'following_count': self.following_count(),
             '_links': {
                 'self': url_for('get_user', id=self.id),
                 'followers': url_for('get_followers', id=self.id),
-                'followed': url_for('get_followed', id=self.id),
+                'following': url_for('get_following', id=self.id),
                 'avatar': self.avatar(128)
             }
         }
@@ -101,15 +136,21 @@ class User(UserMixin, db.Model):
         return data
 
     def followers_to_collection(self):
-        data = {'items': [item.to_dict() for item in self.followers]}
+        query = self.followers.select()
+        result = db.session.scalars(query).all()
+        data = {'items': [item.to_dict() for item in result]}
         return data
 
-    def followed_to_collection(self):
-        data = {'items': [item.to_dict() for item in self.followed]}
+    def following_to_collection(self):
+        query = self.following.select()
+        result = db.session.scalars(query).all()
+        data = {'items': [item.to_dict() for item in result]}
         return data
 
     def posts_to_collection(self):
-        data = {'items': [item.to_dict() for item in self.posts]}
+        query = self.posts.select()
+        result = db.session.scalars(query).all()
+        data = {'items': [item.to_dict() for item in result]}
         return data
     
     def from_dict(self, data, new_user=False):
@@ -125,40 +166,49 @@ class User(UserMixin, db.Model):
         data = {'items': [item.to_dict() for item in all_users]}
         return(data)
 
+
 # ...
-
-
     def get_token(self, expires_in=3600):
-        now = datetime.utcnow()
-        if self.token and self.token_expiration > now + timedelta(seconds=60):
+        now = datetime.now(timezone.utc)
+        if self.token and self.token_expiration.replace(
+                tzinfo=timezone.utc) > now + timedelta(seconds=60):
             return self.token
-        self.token = base64.b64encode(os.urandom(24)).decode('utf-8')
+        self.token = secrets.token_hex(16)
         self.token_expiration = now + timedelta(seconds=expires_in)
         db.session.add(self)
         return self.token
+
     def revoke_token(self):
-        self.token_expiration = datetime.utcnow() - timedelta(seconds=1)
+        self.token_expiration = datetime.now(timezone.utc) - timedelta(
+            seconds=1)
+
     @staticmethod
     def check_token(token):
-        user = User.query.filter_by(token=token).first()
-        if user is None or user.token_expiration < datetime.utcnow():
+        user = db.session.scalar(sa.select(User).where(User.token == token))
+        if user is None or user.token_expiration.replace(
+                tzinfo=timezone.utc) < datetime.now(timezone.utc):
             return None
         return user
 
+
 @login.user_loader
 def load_user(id):
-    return User.query.get(int(id))
+    return db.session.get(User, int(id))
 
 
 class Post(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    body = db.Column(db.String(140))
-    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    body: so.Mapped[str] = so.mapped_column(sa.String(140))
+    timestamp: so.Mapped[datetime] = so.mapped_column(
+        index=True, default=lambda: datetime.now(timezone.utc))
+    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(User.id),
+                                               index=True)
+
+    author: so.Mapped[User] = so.relationship(back_populates='posts')
 
     def __repr__(self):
         return '<Post {}>'.format(self.body)
-
+    
     def to_dict(self):
         data = {
             'id' : self.id,
