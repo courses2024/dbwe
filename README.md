@@ -1,5 +1,5 @@
 # dbwe
-This repository contains code examples, sample solutions to assignments and data files to be used in the course 'Datenbanken und Webentwicklung' at IFA Höhere Fachschule.
+This repository contains code examples, sample solutions to assignments and data files to be used in the course 'Datenbanken und Webentwicklung' at IFA Höhere Fachschule / Ipso Bildung.
 
 ## SQL
 Files for the 1st part of the course
